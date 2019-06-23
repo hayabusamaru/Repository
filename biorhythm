@@ -1,0 +1,150 @@
+#include <stdio.h>
+#include <stdlib.h>
+#define _USE_MATH_DEFINES /*πを使用するための宣言*/
+#include<math.h>
+
+#define M 62 /*大きさが62である理由は二か月の最大日数だから*/
+#define PH 23.0
+#define EM 28.0
+#define IT 33.0
+
+/*グローバル変数*/
+int days = 0; /*経過日数*/
+int days2 = 0; /*二か月後までの日数*/
+
+
+/*閏年の判定*/
+int Leap_judge(int year) {
+
+	if (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+
+}
+
+
+/*日数計測*/
+void Days(void) {
+
+	int days_of_month[13] = { 0,31,28,31,30,31,30,31,31,30,31,30,31 }; /*月ごとの日にち*/
+	int start_y, start_m, start_d;
+	int end_y, end_m, end_d;
+	int leap_years = 0;
+	int i;
+
+	printf("[START] YY MM DD >> ");
+	scanf("%d%d%d", &start_y , &start_m , &start_d);
+	printf(" [end]  YY MM DD >> ");
+	scanf("%d%d%d", &end_y, &end_m, &end_d);
+
+	printf("\n");
+
+	printf("開始日: %d/%d/%d\n", start_y, start_m, start_d);
+	printf("終了日: %d/%d/%d\n", end_y, end_m, end_d);
+
+	/* 閏年の年数 */
+	for (i = start_y + 1; i < end_y; i++) {
+		if (Leap_judge(i)) {
+			leap_years++;
+		}
+	}
+	/* start_y -> end_y の日数 (start_y , end_y は含まない) */
+	if (end_y - start_y > 1) {
+		days += (end_y - start_y - 1) * 365 + leap_years;
+	}
+
+	/* start_y と end_y の年の日数 */
+	if (start_y == end_y) {
+		if (start_m == end_m) {
+			days += end_d - start_d;
+		}
+		else {
+			if (Leap_judge(start_y)) {
+				if ((start_m == 1 || start_m == 2) && end_m > 2) {
+					days++;
+				}
+			}
+			for (i = start_m + 1; i <= end_m - 1; i++) {
+				days += days_of_month[i];
+			}
+			days += days_of_month[start_m] - start_d;
+			days += end_d;
+		}
+	}
+	else {
+		if (Leap_judge(start_y)) {
+			if (start_m == 1 || start_m == 2) {
+				days++;
+			}
+		}
+		if (Leap_judge(end_y)) {
+			if (end_m > 2) {
+				days++;
+			}
+		}
+		for (i = 1; i <= end_m - 1; i++) {
+			days += days_of_month[i];
+		}
+		days += days_of_month[start_m] - start_d;
+		days += end_d;
+	}
+
+	printf("\n");
+
+	/*二か月後までの日数計算*/
+	days2 += days_of_month[end_m];
+
+	if (end_m == 12) {
+		days2 += days_of_month[1];
+	}
+	else {
+		days2 += days_of_month[end_m + 1];
+	}
+
+	if (Leap_judge(end_y)) {
+		if (end_m == 1 || end_m == 2) {
+			days2++;
+		}
+	}
+
+	printf("日数: %d\n", days);
+	printf("(+2month): %d\n\n", days2);
+
+}
+
+
+/*バイオリズムの計算・ファイルへの書き込み*/
+int main() {
+
+	Days();
+
+	double P[M], E[M], I[M], B[M];
+
+	FILE *fp;
+	int i;
+
+	if ((fp = fopen("data.txt", "w")) == NULL) {
+		printf("fopen error\n");
+		exit(1);
+	}
+
+	printf("バイオリズムの計算:\n\n");
+
+	for (i = 0; i < days2; i++) {
+		P[i] = sin((double)(days + i)/ PH * 2 * M_PI);
+		E[i] = sin((double)(days + i)/ EM * 2 * M_PI); /*M_PI = π*/
+		I[i] = sin((double)(days + i)/ IT * 2 * M_PI);
+		B[i] = (P[i] + E[i] + I[i]) / 3.0;
+
+		printf("[%d]：\t%5.3lf\t%5.3lf\t%5.3lf\t%5.3lf\n",i + 1, P[i], E[i], I[i], B[i]);
+		fprintf(fp, "%d\t%5.3lf\t%5.3lf\t%5.3lf\t%5.3lf\n",i + 1, P[i], E[i], I[i], B[i]);
+	}
+
+	fclose(fp);
+
+	return 0;
+
+}
